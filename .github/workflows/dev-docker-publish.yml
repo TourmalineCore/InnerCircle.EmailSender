@@ -1,44 +1,52 @@
-  name: deploy service to dev k8s
+name: deploy service to dev k8s
 
-  on:
-    push:
-      branches:
-        - develop
+on:
+  push:
+    branches:
+      - develop
+      - "#861m96wuk-recover-ci"
 
-      tags:
-        - v*
+    tags:
+      - v*
 
-    pull_request:
+  pull_request:
 
-  env:
-    GUTHUB_REGISTRY: ghcr.io
+env:
+  GITHUB_REGISTRY: ghcr.io
 
-  jobs:
-    deploy-to-dev-k8s:
-      name: Deploy service to k8s for development environment
-      if: github.event_name == 'push'
-      runs-on: ubuntu-18.04
+jobs:
+  deploy-to-dev-k8s:
+    name: Deploy service to k8s for development environment
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
 
-      steps:
-        - name: checkout 
-          uses: actions/checkout@v1
-        - name: Build and push image
-          run: |
-              docker login ${{ env.GUTHUB_REGISTRY }} -u ${{ github.actor }} -p ${{ secrets.GH_REGISTRY_TOKEN }}
-              docker build -t $GUTHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:latest -t $GUTHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:${{ github.sha }} -f EmailSender.Api/Dockerfile .
-              docker push $GUTHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:latest
-              docker push $GUTHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:${{ github.sha }}
-        - name: Deploy
-          uses: WyriHaximus/github-action-helm3@v2
-          with:
-            exec: helm upgrade --namespace dev-inner-circle --create-namespace --install dev-emailsender-service-api 
-                    --set "aspnetcoreEnvironment=Development"
-                    --set "ingress.host"=${{ secrets.DEV_HOST }}
-                    --set "deployment.appsettings.MailOptions.SenderMailAddress=${{ secrets.DEV_SENDERMAILADDRESS }}"
-                    --set "deployment.appsettings.MailOptions.SenderMailPassword=${{ secrets.DEV_SENDERMAILPASSWORD }}"
-                    --set "imageCredentials.username=${{ github.actor }}" 
-                    --set "imageCredentials.password=${{ secrets.GH_REGISTRY_TOKEN }}" 
-                    --set "image.tag=${{ github.sha }}"
-                    --set "image.pullPolicy=Always"
-                    ./EmailSender.Api/ci/chart
-            kubeconfig: '${{ secrets.DEV_KUBECONFIG }}'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: Build and push image
+        run: |
+          docker login ${{ env.GITHUB_REGISTRY }} -u ${{ github.actor }} -p ${{ secrets.GH_REGISTRY_TOKEN }}
+          docker build -t $GITHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:latest -t $GITHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:${{ github.sha }} -f EmailSender.Api/Dockerfile .
+          docker push $GITHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:latest
+          docker push $GITHUB_REGISTRY/tourmalinecore/inner-circle/dev-emailsender-service:${{ github.sha }}
+      - name: Deploy
+        uses: WyriHaximus/github-action-helm3@v2
+        with:
+          exec:
+            helm upgrade --namespace dev-inner-circle --create-namespace --install dev-emailsender-service-api
+            --set "aspnetcoreEnvironment=Development"
+            --set "ingress.host"=${{ secrets.DEV_HOST }}
+            --set "deployment.appsettings.GoogleSmtpOptions.Host=${{ secrets.DEV_MAIL_HOST }}"
+            --set "deployment.appsettings.GoogleSmtpOptions.Port=${{ secrets.DEV_MAIL_PORT }}"
+            --set "deployment.appsettings.GoogleSmtpOptions.FromEmail=${{ secrets.DEV_MAIL_FROM_EMAIL }}"
+            --set "deployment.appsettings.GoogleSmtpOptions.FromPassword=${{ secrets.DEV_MAIL_FROM_PASSWORD }}"
+            --set "resources.limits.cpu=${{ secrets.DEV_APP_CPU_LIMIT }}"
+            --set "resources.limits.memory=${{ secrets.DEV_APP_MEMORY_LIMIT }}"
+            --set "resources.requests.cpu=${{ secrets.DEV_APP_CPU_REQUESTS }}"
+            --set "resources.requests.memory=${{ secrets.DEV_APP_MEMORY_REQUESTS }}"
+            --set "imageCredentials.username=${{ github.actor }}"
+            --set "imageCredentials.password=${{ secrets.GH_REGISTRY_TOKEN }}"
+            --set "image.tag=${{ github.sha }}"
+            --set "image.pullPolicy=Always"
+            ./EmailSender.Api/ci/chart
+          kubeconfig: "${{ secrets.DEV_KUBECONFIG }}"
