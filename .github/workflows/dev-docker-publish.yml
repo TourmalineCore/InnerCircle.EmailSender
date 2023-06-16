@@ -50,6 +50,10 @@ jobs:
             --set "extraSecretEnvVars.GoogleSmtpOptions__FromEmail=${{ secrets.MAIL_FROM_EMAIL }}" \
             --set "extraSecretEnvVars.GoogleSmtpOptions__FromPassword=${{ secrets.MAIL_FROM_PASSWORD }}" \
             --set "extraConfigMapEnvVars.ASPNETCORE_ENVIRONMENT=${{ vars.ASP_ENV }}" \
+            --set "resources.limits.cpu=${{ vars.APP_CPU_LIMIT }}" \
+            --set "resources.limits.memory=${{ vars.APP_MEMORY_LIMIT }}" \
+            --set "resources.requests.cpu=${{ vars.APP_CPU_REQUESTS }}" \
+            --set "resources.requests.memory=${{ vars.APP_MEMORY_REQUESTS }}" \
             "${RELEASE_NAME}" \
             bitnami/aspnet-core
           kubeconfig: "${{ secrets.KUBECONFIG }}"
@@ -80,6 +84,10 @@ jobs:
             --set "extraSecretEnvVars.GoogleSmtpOptions__FromEmail=${{ secrets.MAIL_FROM_EMAIL }}" \
             --set "extraSecretEnvVars.GoogleSmtpOptions__FromPassword=${{ secrets.MAIL_FROM_PASSWORD }}" \
             --set "extraConfigMapEnvVars.ASPNETCORE_ENVIRONMENT=${{ vars.ASP_ENV }}" \
+            --set "resources.limits.cpu=${{ vars.APP_CPU_LIMIT }}" \
+            --set "resources.limits.memory=${{ vars.APP_MEMORY_LIMIT }}" \
+            --set "resources.requests.cpu=${{ vars.APP_CPU_REQUESTS }}" \
+            --set "resources.requests.memory=${{ vars.APP_MEMORY_REQUESTS }}" \
             "${RELEASE_NAME}" \
             bitnami/aspnet-core
           kubeconfig: "${{ secrets.KUBECONFIG }}"
