@@ -52,7 +52,7 @@ jobs:
             --set "extraConfigMapEnvVars.ASPNETCORE_ENVIRONMENT=${{ vars.ASP_ENV }}" \
             "${RELEASE_NAME}" \
             bitnami/aspnet-core
-          kubeconfig: "${{ secrets.DEV_KUBECONFIG }}"
+          kubeconfig: "${{ secrets.KUBECONFIG }}"
 
   deploy-to-prod-k8s:
     needs: build-image
@@ -82,6 +82,6 @@ jobs:
             --set "extraConfigMapEnvVars.ASPNETCORE_ENVIRONMENT=${{ vars.ASP_ENV }}" \
             "${RELEASE_NAME}" \
             bitnami/aspnet-core
-          kubeconfig: "${{ secrets.DEV_KUBECONFIG }}"
+          kubeconfig: "${{ secrets.KUBECONFIG }}"
 
         
