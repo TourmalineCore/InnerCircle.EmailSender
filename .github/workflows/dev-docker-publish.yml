@@ -4,7 +4,8 @@ on:
   push:
     branches:
       - develop
-  pull_request:
+      - master
+      - ci/#863gxmf5j-prepare-to-prod
 
 env:
   GITHUB_REGISTRY: ghcr.io
@@ -26,8 +27,10 @@ jobs:
   deploy-to-dev-k8s:
     needs: build-image
     name: Deploy service to k8s for development environment  
-    if: github.event_name == 'push'
+    if: github.ref_name == 'develop'
     runs-on: ubuntu-22.04
+    environment: dev
+
     steps:
       - name: checkout
         uses: actions/checkout@v1
@@ -41,13 +44,44 @@ jobs:
             helm upgrade --install --namespace dev-inner-circle --create-namespace --values ./EmailSender.Api/ci/values-custom.yaml \
             --set "image.tag=${{ github.sha }}" \
             --set "ingress.enabled=true" \
-            --set "ingress.hostname=innercircle.dev.tourmalinecore.com" \
-            --set "extraSecretEnvVars.GoogleSmtpOptions__Host=${{ secrets.DEV_MAIL_HOST }}" \
-            --set "extraSecretEnvVars.GoogleSmtpOptions__Port=${{ secrets.DEV_MAIL_PORT }}" \
-            --set "extraSecretEnvVars.GoogleSmtpOptions__FromEmail=${{ secrets.DEV_MAIL_FROM_EMAIL }}" \
-            --set "extraSecretEnvVars.GoogleSmtpOptions__FromPassword=${{ secrets.DEV_MAIL_FROM_PASSWORD }}" \
-            --set "extraConfigMapEnvVars.ASPNETCORE_ENVIRONMENT=Development" \
+            --set "ingress.hostname=${{ vars.HOST }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__Host=${{ secrets.MAIL_HOST }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__Port=${{ secrets.MAIL_PORT }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__FromEmail=${{ secrets.MAIL_FROM_EMAIL }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__FromPassword=${{ secrets.MAIL_FROM_PASSWORD }}" \
+            --set "extraConfigMapEnvVars.ASPNETCORE_ENVIRONMENT=${{ vars.ASP_ENV }}" \
             "${RELEASE_NAME}" \
             bitnami/aspnet-core
           kubeconfig: "${{ secrets.DEV_KUBECONFIG }}"
+
+  deploy-to-prod-k8s:
+    needs: build-image
+    name: Deploy service to k8s for production environment  
+    if: github.ref_name == 'ci/#863gxmf5j-prepare-to-prod'
+    runs-on: ubuntu-22.04
+    environment: prod
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v1
+      - name: Deploy
+        uses: WyriHaximus/github-action-helm3@v3
+        with:
+          exec: |
+            RELEASE_NAME=email-sender-api
+            helm version
+            helm repo add bitnami https://charts.bitnami.com/bitnami
+            helm upgrade --install --namespace prod-inner-circle --create-namespace --values ./EmailSender.Api/ci/values-custom.yaml \
+            --set "image.tag=${{ github.sha }}" \
+            --set "ingress.enabled=true" \
+            --set "ingress.hostname=${{ vars.HOST }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__Host=${{ secrets.MAIL_HOST }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__Port=${{ secrets.MAIL_PORT }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__FromEmail=${{ secrets.MAIL_FROM_EMAIL }}" \
+            --set "extraSecretEnvVars.GoogleSmtpOptions__FromPassword=${{ secrets.MAIL_FROM_PASSWORD }}" \
+            --set "extraConfigMapEnvVars.ASPNETCORE_ENVIRONMENT=${{ vars.ASP_ENV }}" \
+            "${RELEASE_NAME}" \
+            bitnami/aspnet-core
+          kubeconfig: "${{ secrets.DEV_KUBECONFIG }}"
+
         
